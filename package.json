@@ -1,0 +1,36 @@
+{
+  "name": "ally",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "src/bot.ts",
+  "scripts": {
+    "dev": "tsx watch src/bot.ts",
+    "start": "tsx src/bot.ts",
+    "reminders:send": "tsx src/send-reminders.ts",
+    "typecheck": "tsc --noEmit",
+    "db:up": "docker compose up -d",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@ai-sdk/openai": "^4.0.74",
+    "ai": "^7.0.113",
+    "dotenv": "^18.0.3",
+    "drizzle-orm": "^0.45.3",
+    "node-telegram-bot-api": "^0.64.0",
+    "postgres": "^3.4.9",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.2",
+    "@types/node-telegram-bot-api": "^0.64.15",
+    "drizzle-kit": "^0.31.11",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}

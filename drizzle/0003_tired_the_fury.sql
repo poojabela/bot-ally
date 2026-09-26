@@ -1,0 +1,1 @@
+ALTER TABLE "scheduled_tasks" ADD COLUMN "sent_at" timestamp with time zone;
