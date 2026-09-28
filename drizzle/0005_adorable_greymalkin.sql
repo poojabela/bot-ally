@@ -1,0 +1,2 @@
+CREATE TYPE "public"."scheduled_task_kind" AS ENUM('reminder', 'inbox_summary');--> statement-breakpoint
+ALTER TABLE "scheduled_tasks" ADD COLUMN "kind" "scheduled_task_kind" DEFAULT 'reminder' NOT NULL;

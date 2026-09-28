@@ -2,11 +2,15 @@ import TelegramBot from 'node-telegram-bot-api';
 import { runAgent } from './agent/run';
 import { db } from './db/client';
 import { messages } from './db/schema';
+import { startServer } from './server';
+import { toTelegramHtml } from './telegram';
 import { findOrCreateUser } from './user';
 import { env } from './env';
 
 
 const bot = new TelegramBot(env.TELEGRAM_BOT_TOKEN, { polling: true });
+
+startServer(bot);
 
 bot.on('message', async (msg) => {
   const text = msg.text;
@@ -27,7 +31,7 @@ bot.on('message', async (msg) => {
     for (const part of parts) {
       await bot.sendChatAction(msg.chat.id, 'typing');
       await new Promise((resolve) => setTimeout(resolve, Math.min(part.length * 30, 2000)));
-      await bot.sendMessage(msg.chat.id, part);
+      await bot.sendMessage(msg.chat.id, toTelegramHtml(part), { parse_mode: 'HTML' });
       await db.insert(messages).values({ userId: user.id, role: 'assistant', content: part });
     }
   } catch (error) {

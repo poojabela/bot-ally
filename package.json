@@ -19,9 +19,11 @@
   "description": "",
   "dependencies": {
     "@ai-sdk/openai": "^4.0.74",
+    "@googleapis/gmail": "^22.0.1",
     "ai": "^7.0.113",
     "dotenv": "^18.0.3",
     "drizzle-orm": "^0.45.3",
+    "google-auth-library": "^11.1.0",
     "node-telegram-bot-api": "^0.64.0",
     "postgres": "^3.4.9",
     "zod": "^4.6.5"
