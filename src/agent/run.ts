@@ -14,7 +14,7 @@ import { labelAccountTool } from './tools/gmail/label-account';
 import { searchEmailsTool } from './tools/gmail/search-emails';
 import { readEmailTool } from './tools/gmail/read-email';
 import { draftReplyTool } from './tools/gmail/draft-reply';
-import { getGmailAccounts } from '../gmail/client';
+import { getExpiredGmailEmails, getGmailAccounts } from '../gmail/client';
 import { connectUrl } from '../gmail/oauth';
 import { localTimeOfDay } from '../time';
 
@@ -40,6 +40,7 @@ export async function runAgent(user: typeof users.$inferSelect) {
     .orderBy(asc(scheduled_tasks.scheduledAt));
 
   const gmailAccounts = await getGmailAccounts(user.id);
+  const expiredGmailEmails = await getExpiredGmailEmails(user.id);
 
   const now = new Date().toLocaleString('en-US', { timeZone: user.timezone ?? 'UTC' });
 
@@ -64,6 +65,10 @@ export async function runAgent(user: typeof users.$inferSelect) {
   const gmailNote = gmailAccounts.length > 0
     ? `\nTheir connected Gmail accounts:\n${gmailAccounts.map((a) => `- ${a.email}${a.label ? ` (${a.label})` : ''}`).join('\n')}\nTo connect another account, send them this link: ${connectUrl(user.id)}\nTo remove an account, ask them to confirm first, then use disconnect_gmail.`
     : `\nThey haven't connected Gmail yet. When they want anything email related, send them this link to connect: ${connectUrl(user.id)}`;
+
+  const expiredGmailNote = expiredGmailEmails.length > 0
+    ? `\nGmail access expired for: ${expiredGmailEmails.join(', ')}. You can't read those until they reconnect. Tell them once, casually, and send this link: ${connectUrl(user.id)}`
+    : '';
 
   const isFirstChat = !history.some((m) => m.role === 'assistant');
 
@@ -97,7 +102,7 @@ Getting to know them:
 - When they mention something personal and lasting (job, city, family, routines, goals, likes), save it with the save_memory tool. Don't tell them you saved it. Don't save small talk.
 - Ask at most one light question about them per reply, and only when it fits the chat. Never ask a list of questions.
 
-Current time: ${now}.${nameNote}${timezoneNote}${memoriesNote}${remindersNote}${gmailNote}${firstChatNote}`;
+Current time: ${now}.${nameNote}${timezoneNote}${memoriesNote}${remindersNote}${gmailNote}${expiredGmailNote}${firstChatNote}`;
 
   const { text } = await generateText({
     model: registry.languageModel(env.LLM_MODEL),

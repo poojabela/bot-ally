@@ -17,7 +17,9 @@ export function searchEmailsTool(accounts: GmailAccount[]) {
       const selected = account ? findAccount(accounts, account) : undefined;
       if (account && !selected) return { error: `No connected account ${account}` };
 
-      return { emails: await searchEmails(selected ? [selected] : accounts, query, maxResults) };
+      const { emails, expired } = await searchEmails(selected ? [selected] : accounts, query, maxResults);
+      if (expired.length === 0) return { emails };
+      return { emails, expired, note: 'Gmail access expired for these accounts. Tell them and send the connect link so they can reconnect.' };
     },
   });
 }
