@@ -26,7 +26,7 @@ bot.on('message', async (msg) => {
 
     const reply = await runAgent(user);
     const parts = reply.split(/\n\s*\n/).map((part) => part.trim()).filter(Boolean);
-    if (parts.length === 0) console.error('Empty reply from agent');
+    if (parts.length === 0) throw new Error('Empty reply from agent');
 
     for (const part of parts) {
       await bot.sendChatAction(msg.chat.id, 'typing');

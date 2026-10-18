@@ -1,11 +1,15 @@
 export function localTimeToDate(localTime: string, timezone: string) {
   const asUtc = new Date(`${localTime}Z`);
+  const guess = new Date(asUtc.getTime() - offsetMinutes(asUtc, timezone) * 60_000);
+  return new Date(asUtc.getTime() - offsetMinutes(guess, timezone) * 60_000);
+}
+
+function offsetMinutes(date: Date, timezone: string) {
   const offset = new Intl.DateTimeFormat('en-US', { timeZone: timezone, timeZoneName: 'longOffset' })
-    .formatToParts(asUtc)
+    .formatToParts(date)
     .find((part) => part.type === 'timeZoneName')!.value;
   const match = offset.match(/GMT([+-])(\d{2}):(\d{2})/);
-  const offsetMinutes = match ? (match[1] === '-' ? -1 : 1) * (Number(match[2]) * 60 + Number(match[3])) : 0;
-  return new Date(asUtc.getTime() - offsetMinutes * 60_000);
+  return match ? (match[1] === '-' ? -1 : 1) * (Number(match[2]) * 60 + Number(match[3])) : 0;
 }
 
 export function localDate(date: Date, timezone: string) {

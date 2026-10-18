@@ -18,13 +18,20 @@ export async function sendDueReminders(bot: TelegramBot) {
       await sendInboxSummary(bot, reminder);
       continue;
     }
+    const [claimed] = await db
+      .update(scheduled_tasks)
+      .set({ sentAt: new Date() })
+      .where(and(eq(scheduled_tasks.id, reminder.id), isNull(scheduled_tasks.sentAt)))
+      .returning({ id: scheduled_tasks.id });
+    if (!claimed) continue;
+
     try {
       const content = reminder.task;
       await bot.sendMessage(reminder.user.chat_id, content);
-      await db.update(scheduled_tasks).set({ sentAt: new Date() }).where(eq(scheduled_tasks.id, reminder.id));
       await db.insert(messages).values({ userId: reminder.user.id, role: 'assistant', content });
     } catch (error) {
       console.error(`Failed to send reminder ${reminder.id}`, error);
+      await db.update(scheduled_tasks).set({ sentAt: null }).where(eq(scheduled_tasks.id, reminder.id));
     }
   }
 }

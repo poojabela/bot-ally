@@ -45,7 +45,7 @@ export function startServer(bot: TelegramBot) {
         const { data: profile } = await gmail({ version: 'v1', auth }).users.getProfile({ userId: 'me' });
         const email = profile.emailAddress!;
 
-        await db
+        const [connection] = await db
           .insert(connections)
           .values({
             userId,
@@ -58,11 +58,13 @@ export function startServer(bot: TelegramBot) {
           .onConflictDoUpdate({
             target: [connections.userId, connections.provider, connections.externalAccountId],
             set: { credentialsEncrypted: encrypt(tokens.refresh_token), scopes: GMAIL_SCOPES, status: 'active' },
-          });
+          })
+          .returning({ metadata: connections.metadata });
 
         const user = await db.query.users.findFirst({ where: eq(users.id, userId) });
         if (user) {
-          const content = `${email} is connected. is this your work or personal email?`;
+          const label = (connection.metadata as { label?: string } | null)?.label;
+          const content = label ? `${email} is connected again ✅` : `${email} is connected. is this your work or personal email?`;
           await bot.sendMessage(user.chat_id, content);
           await db.insert(messages).values({ userId, role: 'assistant', content });
         }
