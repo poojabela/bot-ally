@@ -1,5 +1,5 @@
-import { generateText, isStepCount } from 'ai';
-import { and, asc, desc, eq, inArray, isNull } from 'drizzle-orm';
+import { generateText, isStepCount, type ModelMessage } from 'ai';
+import { and, asc, desc, eq, isNull } from 'drizzle-orm';
 import { db } from '../db/client';
 import { messages, users, memories, scheduled_tasks } from '../db/schema';
 import { env } from '../env';
@@ -22,9 +22,12 @@ export async function runAgent(user: typeof users.$inferSelect) {
   const history = await db
     .select()
     .from(messages)
-    .where(and(eq(messages.userId, user.id), inArray(messages.role, ['user', 'assistant'])))
+    .where(eq(messages.userId, user.id))
     .orderBy(desc(messages.createdAt))
     .limit(20);
+  history.reverse();
+  const firstUserMessage = history.findIndex((m) => m.role === 'user');
+  const conversation = history.slice(firstUserMessage);
 
   const memoriesList = await db
     .select()
@@ -104,26 +107,37 @@ Getting to know them:
 
 Current time: ${now}.${nameNote}${timezoneNote}${memoriesNote}${remindersNote}${gmailNote}${expiredGmailNote}${firstChatNote}`;
 
-  const { text } = await generateText({
+  const { text, response } = await generateText({
     model: registry.languageModel(env.LLM_MODEL),
     instructions,
-    messages: history.reverse().map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })),
+    messages: conversation.map((m): ModelMessage =>
+      m.role === 'tool' ? JSON.parse(m.content) : { role: m.role, content: m.content },
+    ),
     tools: {
       set_timezone: setTimezoneTool(user.id),
       save_memory: saveMemoryTool(user.id),
       set_reminder: setReminderTool(user.id),
       cancel_reminder: cancelReminderTool(user.id),
-      ...(gmailAccounts.length > 0 && {
+      ...((gmailAccounts.length > 0 || expiredGmailEmails.length > 0) && {
         label_account: labelAccountTool(user.id),
         disconnect_gmail: disconnectGmailTool(user.id),
+        set_daily_summary: setDailySummaryTool(user.id),
+      }),
+      ...(gmailAccounts.length > 0 && {
         search_emails: searchEmailsTool(gmailAccounts),
         read_email: readEmailTool(gmailAccounts),
         draft_reply: draftReplyTool(gmailAccounts),
-        set_daily_summary: setDailySummaryTool(user.id),
       }),
     },
     stopWhen: isStepCount(5),
   });
+
+  const toolMessages = response.messages.filter(
+    (m) => m.role === 'tool' || (Array.isArray(m.content) && m.content.some((part) => part.type === 'tool-call')),
+  );
+  for (const message of toolMessages) {
+    await db.insert(messages).values({ userId: user.id, role: 'tool', content: JSON.stringify(message) });
+  }
 
   return text;
 }
